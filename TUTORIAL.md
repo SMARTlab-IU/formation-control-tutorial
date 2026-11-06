@@ -1,8 +1,8 @@
-# Multi-Robot Formation Control with Differential Drive Robots
+# Multi-Robot Formation Control with Differential-Drive Robots
 
-This tutorial introduces the basic concepts of a multi-robot system by implementing formation control for HamsterS differential-drive robots.
+This tutorial demonstrates formation control using HamsterS differential-drive robots and explains underlying concepts of multi-robot coordination.
 
-In formation control, a team of robots attempts to achieve and maintain a desired spatial arrangement. Here, each robot uses its measured position and the team's desired relative displacement vectors to determine how it should move. An overhead camera detects ArUco markers to estimate robot positions and orientations, and a Python program converts the resulting formation-control vectors into wheel commands.
+In formation control, a team of robots works to achieve and maintain a desired spatial arrangement. In this implementation, the controller uses the robots' measured positions and desired relative displacements to determine how each robot should move. An overhead camera detects ArUco markers to estimate each robot's position and orientation, while a Python program converts the resulting control vectors into wheel commands. Although this tutorial uses HamsterS robots, the implementation can be adapted to other differential-drive robots.
 
 ## 1. Objectives
 
@@ -13,50 +13,57 @@ By the end of the tutorial, you should understand how to:
 3. Define a circular formation using relative displacement vectors.
 4. Calculate formation errors and control vectors for each robot.
 5. Convert control vectors into differential-drive wheel commands.
-6. Integrate perception and control into a continuous control loop.
+6. Integrate perception and control in a continuous control loop.
 
-The system uses fixed formation-slot assignments, meaning each robot is assigned a predetermined position within the desired formation. The goal is to establish the circular arrangement, not to bring all robots to the same point.
+Each robot is assigned a fixed slot in the desired circular formation. The objective is to establish this arrangement, not to bring all the robots to a single point.
 
 ## 2. System Overview
 
-The system uses a stationary USB camera above the operating area. A unique ArUco marker is attached to the top of each robot. OpenCV identifies the markers and estimates each robot's position and heading in image coordinates.
+A stationary USB camera is mounted above the operating area, with a unique ArUco marker attached to each robot. OpenCV detects these markers and estimates each robot's position and heading in image coordinates.
 
-The Python program compares the robots' current pairwise displacements with those required by a circular formation. It then computes a two-dimensional movement vector for each robot and sends robot-specific wheel commands through RoboID. The calculation is centralized: a single computer receives the camera image and controls all the robots.
+The Python program compares the robots' measured pairwise displacements with those of the desired circular formation. It then computes a two-dimensional control vector for each robot and sends wheel commands through RoboID. The system is centralized: one computer processes the camera images and controls all the robots.
 
 ### Project Structure
 
 ```text
 project/
+├── images/
+├── utils/
+│   ├── camera_supervisor.py
+│   ├── formation_control.py
+│   ├── actuation.py
+│   └── img_overlay.py
+├── README.md
+├── TUTORIAL.md
 ├── main.py
-├── settings.py
-└── utils/
-    ├── camera_supervisor.py
-    ├── formation_control.py
-    ├── actuation.py
-    └── img_overlay.py
+└── settings.py
 ```
 
+- `images/`: Contains the figures and demonstrations used in the tutorial.
+- `utils/`: Contains supporting modules for perception, formation control, actuation, and visualization.
+- `README.md`: Provides an overview of the project.
+- `TUTORIAL.md`: Contains these step-by-step tutorial instructions.
 - `main.py`: Initializes robots and runs the control loop.
 - `settings.py`: Stores robot IDs, formation parameters, controller gains, and thresholds.
-- `camera_supervisor.py`: Detects ArUco markers and estimates robot poses.
-- `formation_control.py`: Generates the desired formation and relative displacements.
-- `actuation.py`: Converts control vectors into wheel commands.
-- `img_overlay.py`: Optionally displays robot positions, control vectors, and formation error.
+- `utils/camera_supervisor.py`: Detects ArUco markers and estimates robot poses.
+- `utils/formation_control.py`: Generates the desired formation and relative displacements.
+- `utils/actuation.py`: Converts control vectors into wheel commands.
+- `utils/img_overlay.py`: Optionally visualizes robot positions, control vectors, and formation error.
 
 ## 3. Hardware
 
 ### Requirements
 
 - Robots: Two or more HamsterS robots (or equivalent differential-drive robots).
-- Camera: One overhead USB camera, preferably capable 1080p resolution.
-- ArUco Markers: One printed ArUco marker per robot.
+- Camera: One overhead USB camera, preferably capable of capturing 1080p video.
+- ArUco markers: One printed ArUco marker per robot.
 - Computer: A computer capable of running Python.
 
-Note: Other robots may require changes to the robot-specific control API, library calls, and wheel-command units. The formation equations and pose-estimation approach are not specific to HamsterS.
+**Note:** The formation equations and pose-estimation approach are not specific to HamsterS. Other robot platforms may require adapting the implementation to use their respective software development kits (SDKs) instead of RoboID.
 
 ### Generating Markers
 
-The following example generates marker ID 15 from the DICT_7X7_100 ArUco dictionary, matching the first ID in the example configuration:
+The following example generates marker ID 15 from the `DICT_7X7_100` ArUco dictionary. This matches the first ID in the example configuration:
 
 ```python
 import cv2
@@ -71,13 +78,13 @@ marker = cv2.aruco.generateImageMarker(
 cv2.imwrite("marker_15.png", marker)
 ```
 
-Generate a different marker ID for each robot and use the same dictionary during detection. Print markers flat, with a clear white margin, and secure them so they do not rotate relative to the robot.
+Generate a different marker ID for each robot, and use the same dictionary for detection. Print each marker flat with a clear white margin, and attach it securely so that it cannot rotate relative to the robot.
 
-Orientation convention: The top edge of the generated marker image should point toward the front of the robot. The orientation estimator assumes this mounting direction.
+**Orientation convention:** Mount each marker so that its top edge points toward the front of the robot. The heading calculations below assume this orientation.
 
-### Camera placement
+### Camera Placement
 
-Secure the camera above the operating area, approximately perpendicular to the floor. Keep all markers within view and ensure adequate, consistent lighting. Auto-focus hunting and motion blur can reduce detection reliability; fixed focus can help.
+Secure the camera above the operating area, with its view approximately perpendicular to the floor. Keep all markers within view and provide consistent lighting. Changes in autofocus and motion blur can make markers harder to detect; a fixed-focus setting can help.
 
 <p align="center">
   <img src="images/setup.jpeg" alt="Overhead camera and four differential-drive robots inside the operating area" width="480">
@@ -88,9 +95,9 @@ Secure the camera above the operating area, approximately perpendicular to the f
 
 The implementation uses:
 
-- Python 3.10 or newer for the main program (the `RobotAgent` type hints use `| None`).
+- Python 3.10 or newer (the `RobotAgent` type hints use `| None`).
 - NumPy for array and vector calculations.
-- OpenCV, with the ArUco module, for image capture and marker detection.
+- OpenCV with ArUco support for image capture and marker detection.
 - RoboID for HamsterS communication and wheel commands.
 
 Install the Python dependencies:
@@ -99,20 +106,20 @@ Install the Python dependencies:
 python -m pip install numpy opencv-contrib-python roboid
 ```
 
-The actual controller imports the HamsterS class using:
+The example controller imports RoboID using:
 
 ```python
 from roboid import *
 ```
 
-For different robot platforms, use the relevant manufacturer's Python SDK or control API.
+For other robot platforms, use the manufacturer's Python SDK or control API.
 
 ### Controller Settings
 
 The relevant values in `settings.py` are:
 
 ```python
-target_ids = [15, 16, 17, 90]
+target_ids = [0, 1, 2, 3]
 ROBOTS_N = 4
 SHAPE_R = 100
 KP_DISTANCE = 0.7
@@ -123,9 +130,9 @@ OBS_THRESHOLD = 70
 OBS_SPEED = 50
 ```
 
-The `target_ids` list determines the robot connection order: marker ID 15 corresponds to robot index 0, ID 16 to index 1, ID 17 to index 2, and ID 90 to index 3. Connect the physical robots in this order. Marker IDs are not RoboID connection IDs.
+The `target_ids` list determines the robot connection order: marker ID 15 corresponds to robot index 0, marker ID 16 to index 1, marker ID 17 to index 2, and marker ID 90 to index 3. Connect the physical robots in this order. ArUco marker IDs are not RoboID connection IDs.
 
-`SHAPE_R` is measured in image pixels; the gains and thresholds are explained where they are used below.
+`SHAPE_R` is measured in image pixels. The controller gains and thresholds are explained in [Section 7: Converting a Vector into Robot Motion](#7-converting-a-vector-into-robot-motion).
 
 ## 5. Tracking Robot Poses
 
@@ -145,13 +152,13 @@ For each camera frame:
 corners, ids, rejected = detector.detectMarkers(frame)
 ```
 
-The detector returns:
+`detectMarkers()` returns:
 
 - `corners`: One array of four corner coordinates for each successfully identified marker.
 - `ids`: Corresponding marker IDs, or `None` if no markers were identified.
-- `rejected`: Candidate marker regions that could not be identified; these are not used here. It is not a Boolean.
+- `rejected`: Candidate marker regions that could not be identified. These are not used here; `rejected` is not a Boolean.
 
-OpenCV returns the detected marker corners in the order top-left, top-right, bottom-right, bottom-left, relative to the marker's encoded orientation. Each `corners[k]` corresponds to `ids[k]`.
+OpenCV returns each marker's corners in the order top-left, top-right, bottom-right, and bottom-left, relative to the marker's encoded orientation. Each `corners[k]` corresponds to `ids[k]`.
 
 ```python
 if ids is not None:
@@ -160,7 +167,7 @@ if ids is not None:
         print(f"Detected marker ID: {int(marker_id)}")
 ```
 
-Optional visual check: To display the detected marker outlines and IDs on the camera image, add the following after `detectMarkers` (this is not part of the original display behavior):
+To optionally display detected marker outlines and IDs on the camera image, add the following after `detectMarkers()`:
 
 ```python
 if ids is not None:
@@ -169,15 +176,15 @@ if ids is not None:
 
 ### Finding Robot Position
 
-The robot position is estimated using the center of its ArUco marker. This is calculated by averaging the x and y coordinates of the marker’s four corners.
+A robot's position is estimated from the center of its ArUco marker, found by averaging the coordinates of its four corners.
 
-For marker corners $`(c_0,c_1,c_2,c_3)`$, the center is:
+For marker corners $`c_0,c_1,c_2,c_3`$, the center is:
 
 ```math
 p_i = \frac{c_0+c_1+c_2+c_3}{4}
 ```
 
-Where:
+Here:
 
 - $`p_i = [x_i,y_i]`$: Estimated position of robot $`i`$ in image coordinates.
 - $`c_0,c_1,c_2,c_3`$: The four detected ArUco marker corners, each represented as an $`(x,y)`$ coordinate.
@@ -192,33 +199,33 @@ x = center[0]
 y = center[1]
 ```
 
-The robot positions are represented directly in camera pixel coordinates. The image origin is at the top-left, with x increasing rightward and y increasing downward. The marker center approximates the robot center only if the marker is mounted centrally.
+Robot positions are expressed directly in camera pixel coordinates. The image origin is at the top-left corner; x increases to the right and y increases downward. The marker center approximates the robot's center only if the marker is mounted centrally.
 
 ### Finding Robot Orientation
 
-The robot heading is estimated using the direction from the bottom edge of the ArUco marker toward its top edge.
+The robot's heading is estimated from the direction pointing from the marker's bottom edge toward its top edge.
 
 <p align="center">
   <img src="images/heading.png" alt="ArUco marker showing robot heading and orientation angle" width="450">
 </p>
 <p align="center"><em>Figure 2. ArUco marker heading direction and orientation angle.</em></p>
 
-OpenCV uses the zero-based corner indices $`c_0`$ to $`c_3`$. The controller computes angles using image coordinates, where the positive y-direction points downward.
+OpenCV uses zero-based corner indices $`c_0`$ through $`c_3`$. The controller computes angles in image coordinates, where the positive y-direction points downward.
 
-First, the midpoint of the top edge and the midpoint of the bottom edge are calculated:
+First, calculate the midpoints of the top and bottom edges:
 
 ```python
 top_center = (topLeft + topRight) / 2
 bottom_center = (bottomLeft + bottomRight) / 2
 ```
 
-The heading vector is then calculated from the bottom-edge midpoint to the top-edge midpoint:
+Next, subtract the bottom-edge midpoint from the top-edge midpoint to obtain the heading vector:
 
 ```python
 heading_vector = top_center - bottom_center
 ```
 
-The orientation of the robot is calculated from this heading vector:
+Calculate the robot's orientation from this heading vector:
 
 ```python
 theta = math.degrees(
@@ -229,19 +236,19 @@ theta = math.degrees(
 )
 ```
 
-The measured heading is in degrees. Normalize it to the range $`[0^\circ,360^\circ)`$:
+The heading is measured in degrees. Normalize it to the range $`[0^\circ,360^\circ)`$:
 
 ```python
 theta %= 360
 ```
 
-The robot pose can be written as $`[x,y,\theta]`$, where $`\theta`$ is the heading measured from the positive image x-axis. In image coordinates, positive angles increase clockwise. The actual `RobotAgent` stores `position` and `orientation` as separate fields.
+The robot's pose can be written as $`[x,y,\theta]`$, where $`\theta`$ is its heading relative to the positive image x-axis. Because image y-coordinates increase downward, positive angles rotate clockwise. The `RobotAgent` class stores `position` and `orientation` in separate fields.
 
 ### Updating Poses Safely
 
-`update_poses()` belongs in `utils/camera_supervisor.py`. It updates each robot object with the current frame's measured position and orientation.
+The `update_poses()` function in `utils/camera_supervisor.py` updates each robot's position and orientation from the current frame.
 
-A necessary safety correction is to reset every pose before detecting markers in each new frame. Otherwise, the earlier version of `update_poses` can leave stale robot positions when no marker is detected. Inside that function, use:
+Reset every pose before processing each new frame. Otherwise, a robot that disappears from view could retain its previous position and orientation. The function can be written as follows:
 
 ```python
 def update_poses(ROBOTS, frame):
@@ -264,17 +271,15 @@ def update_poses(ROBOTS, frame):
         )
 ```
 
-This function requires `import math`, `import numpy as np`, and an initialized ArUco `detector` in `camera_supervisor.py`. It resets missing poses in both partially detected and entirely missed frames. The uploaded `camera_supervisor(8).py` needs this correction: its current early return can leave old poses when all markers disappear.
+This function requires `import math` and an initialized ArUco `detector` in `camera_supervisor.py`. Any robot not detected in the current frame retains a `None` pose, allowing the main control loop to stop the robots instead of acting on outdated measurements.
 
 ## 6. Formation Control
 
-The goal of formation control is for all robots to move toward a desired spatial arrangement. Unlike rendezvous, the robots do not converge to a single location; the desired relative spacing is nonzero.
-
-The formation controller uses the relative positions between each pair of robots. It compares their current relative positions with the desired relative positions defined by the target formation.
+Unlike rendezvous, where robots converge to a common point, formation control aims to achieve a specified spatial arrangement. The controller compares the measured displacement between each pair of robots with the corresponding displacement in the desired formation.
 
 ### Circular Formation
 
-The desired formation places the robots at equally spaced points around a circle. The set of desired positions is called $`P^*`$ ("P star"). First, we find the spacing between formation slots by dividing one full revolution, $`2\pi`$ radians ($`360^\circ`$), by the number of robots. Each robot is assigned a fixed slot, and the angle of that slot is used to calculate its desired coordinates:
+In a circular formation, the robots occupy equally spaced positions around a circle. We call the set of desired positions $`P^*`$ ("P star"). Dividing a full revolution, $`2\pi`$ radians ($`360^\circ`$), by the number of robots gives the angular spacing between slots. Each robot is assigned a fixed slot, whose angle determines its desired coordinates:
 
 ```math
 p_i^* = \begin{bmatrix}
@@ -283,18 +288,18 @@ R\sin\left(\frac{2\pi i}{N}\right)
 \end{bmatrix}, \qquad i=0,\ldots,N-1
 ```
 
-Where:
+Here:
 
 - $`P^*`$: The array containing all desired formation positions $`p_i^*`$.
 - $`N`$ (`ROBOTS_N`): Number of robots.
 - $`R`$ (`SHAPE_R`): Desired formation radius, in image pixels.
-- $`i`$: Robot's fixed formation slot index, starting at 0.
+- $`i`$: Index of a robot's fixed formation slot, starting at 0.
 - $`2\pi/N`$: Angular spacing between consecutive slots.
 
 <p align="center"><img src="images/p_star.png" alt="Desired circular formation diagrams for one through four robots" width="900"></p>
 <p align="center"><em>Figure 3. Desired circular formations for different numbers of robots (R = 100 pixels).</em></p>
 
-For four robots, these positions form a square (diamond-shaped relative to the image axes). The coordinates in $`P^*`$ are defined relative to the origin, $`(0,0)`$, rather than a fixed location in the camera image. They describe the shape of the formation, but not where the robots must form it. To establish the same arrangement anywhere in the camera view, we next calculate the relative displacements between formation slots.
+With four robots, these positions form a square that appears diamond-shaped relative to the image axes. The coordinates in $`P^*`$ are defined relative to the origin, $`(0,0)`$, and specify the formation's shape rather than a fixed location in the camera image. To achieve the same arrangement anywhere in the camera view, the controller uses relative displacements between formation slots.
 
 ```python
 def p_star():
@@ -314,25 +319,25 @@ The center-to-center spacing between adjacent formation slots is:
 d_{\mathrm{adjacent}}=2R\sin\left(\frac{\pi}{N}\right)
 ```
 
-For `ROBOTS_N = 4` and `SHAPE_R = 100`, adjacent slots are approximately 141.4 pixels apart. As the number of robots increases while the radius stays fixed, neighboring slots become closer together. Choose a radius that gives the robots enough room to move without colliding.
+For `ROBOTS_N = 4` and `SHAPE_R = 100`, adjacent slots are approximately 141.4 pixels apart. As the number of robots increases while the radius stays fixed, neighboring slots become closer together. Choose a radius that provides enough clearance between robots.
 
 ### Desired Pairwise Displacements
 
-Rather than directing each robot to a fixed position in the image, the controller uses relative displacements between formation slots. This allows the same formation to be established anywhere within the camera's field of view. The set of desired pairwise displacement vectors is called $`D^*`$ ("D star"). Each vector is calculated from the positions in $`P^*`$:
+The set of desired pairwise displacement vectors is called $`D^*`$ ("D star"). Each vector describes how one robot should be positioned relative to another, independently of the formation's location in the image. These vectors are calculated from the desired positions in $`P^*`$:
 
 ```math
 d_{ij}^* = p_j^* - p_i^*
 ```
 
-Where:
+Here:
 
 - $`d_{ij}^*`$: Desired displacement vector pointing from robot $`i`$ to robot $`j`$.
 - $`p_i^*`$ and $`p_j^*`$: Desired positions of the fixed formation slots for robots $`i`$ and $`j`$.
 - `d_star(ROBOTS, desired_positions)`: Builds the desired-displacement array using each robot's assigned `slot`.
 
-Subtracting $`p_i^*`$ from $`p_j^*`$ produces a vector pointing from robot $`i`$'s desired slot to robot $`j`$'s desired slot. This vector specifies both the direction and distance that should separate the two robots. For example, if robot $`j`$ should be 100 pixels to the right of robot $`i`$, then $`d_{ij}^*=(100,0)`$. That relationship stays the same even when the entire formation moves to a different part of the camera view.
+Subtracting $`p_i^*`$ from $`p_j^*`$ gives the vector from robot $`i`$'s desired slot to robot $`j`$'s desired slot. This vector specifies both the direction and distance between them. For example, if robot $`j`$ should be 100 pixels to the right of robot $`i`$, then $`d_{ij}^*=(100,0)`$. The same displacement applies wherever the formation is located in the camera view.
 
-The three diagrams below show the desired displacement vectors from each robot's assigned formation slot to the other two slots in a three-robot circle. Solid squares denote the robot whose vectors are being shown; dashed squares mark the other target slots.
+Figure 4 shows the desired displacement vectors from each robot's assigned slot to the other two slots in a three-robot formation. Solid squares identify the robot whose vectors are shown; dashed squares mark the other desired slots.
 
 <p align="center"><img src="images/d_star.png" alt="Desired pairwise displacement vectors for robots 0, 1, and 2" width="750"></p>
 <p align="center"><em>Figure 4. Desired pairwise displacement vectors for robots 0, 1, and 2 in a three-robot circular formation.</em></p>
@@ -349,13 +354,11 @@ def d_star(ROBOTS, desired_positions):
     return desired_offset
 ```
 
-The supplied `formation_control(2).py` contains `p_star()` but does not yet define `d_star()`. Add the function above to `formation_control.py` for the main script's import to work.
+Make sure `formation_control.py` contains both `p_star()` and `d_star()`, since `main.py` imports both functions.
 
 ### Formation Error and Control Vector
 
-For robot $`i`$, the current displacement vector to robot $`j`$ is calculated by subtracting the position of robot $`i`$ from the position of robot $`j`$. The desired displacement vector $`d_{ij}^*`$ is then subtracted from this current displacement.
-
-Remember that $`p_j-p_i`$ produces a vector pointing from robot $`i`$ to robot $`j`$.
+For each pair of robots, subtract the position of robot $`i`$ from the position of robot $`j`$ to obtain their current displacement. Subtracting the desired displacement $`d_{ij}^*`$ then gives the pairwise displacement error. The vector $`p_j-p_i`$ points from robot $`i`$ to robot $`j`$.
 
 ```math
 d_{ij}=p_j-p_i
@@ -365,40 +368,46 @@ d_{ij}=p_j-p_i
 e_{ij}=(p_j-p_i)-d_{ij}^*
 ```
 
-For example, with $`p_i=(100,100)`$, $`p_j=(70,160)`$ and $`d_{ij}^*=(-100,100)`$:
+For example, suppose $`p_i=(100,100)`$, $`p_j=(70,160)`$, and $`d_{ij}^*=(-100,100)`$:
 
 ```math
 d_{ij}=(-30,60),\qquad e_{ij}=(-30,60)-(-100,100)=(70,-40)
 ```
 
 
-Each robot combines its pairwise displacement errors to calculate a two-dimensional control vector, $`u_i=[u_{ix},u_{iy}]`$, which guides robot $`i`$ toward the desired arrangement. Because the controller uses relative displacements, the formation can be achieved anywhere in the camera view rather than at one fixed location.
+Each robot sums its pairwise displacement errors to obtain a two-dimensional control vector $`u_i=[u_{ix},u_{iy}]`$:
+
+```math
+u_i=\sum_{j=0}^{N-1} e_{ij}
+```
+
+This vector gives robot $`i`$ a direction in which to move to reduce the formation error. The self-pair term $`e_{ii}`$ is zero, so including it does not affect the sum.
 
 ## 7. Converting a Vector into Robot Motion
 
-The formation controller produces a movement vector in the camera image coordinate frame:
+The formation controller produces a control vector in the camera image coordinate frame:
 
 ```math
 u=[u_x,u_y]
 ```
 
-The vector provides a desired direction of motion in the image plane, but a differential-drive robot cannot move directly in an arbitrary x and y direction. It can only drive forward or backward and rotate by changing the speeds of its two wheels.
+This vector specifies a desired direction of motion, but a differential-drive robot cannot move sideways. Instead, it must turn and drive forward or backward by controlling the speeds of its two wheels. Here, the robot first turns toward its control vector and then drives forward.
 
 ### Target Heading
 
-The direction of the movement vector is calculated using:
+Calculate the direction of the control vector using:
 
 ```python
 target_angle = math.degrees(math.atan2(uy, ux))
 ```
 
-This gives the direction that the robot should face, in degrees, using the same image-coordinate convention as its measured orientation. The controller then compares this direction with the robot's current heading:
+This gives the desired heading in degrees, using the same image-coordinate convention as the robot's measured orientation. Subtract the current heading to calculate the angular error:
 
 ```python
 angle_error = target_angle - theta
 ```
 
-The angle error is wrapped to the range $`[-180^\circ,180^\circ)`$ so that the robot turns through the shortest direction:
+Wrap the angular error to the range $`[-180^\circ,180^\circ)`$ so that the robot turns in the direction requiring the least rotation:
 
 ```python
 angle_error = (angle_error + 180) % 360 - 180
@@ -410,9 +419,7 @@ e_\theta = ((\theta_{\mathrm{target}}-\theta_i+180)\bmod 360)-180
 
 ### Turning
 
-If the heading error is larger than `ANGLE_THRESHOLD`, the wheels rotate in opposite directions, causing the robot to turn in place. The direction of the turn depends on whether the angle error is positive or negative.
-
-When the heading error exceeds `ANGLE_THRESHOLD`, turn speed is proportional to its absolute value, with a cap of 40 in the original controller:
+When the absolute heading error exceeds `ANGLE_THRESHOLD`, the robot turns in place by rotating its wheels in opposite directions. The sign of the error determines which way it turns. The turn speed is proportional to the magnitude of the error, with a maximum command of 40:
 
 ```math
 s_{\mathrm{turn}}=\min(K_{p,\theta}|e_\theta|,40)
@@ -428,17 +435,17 @@ else:
 
 ### Forward Motion
 
-Once the robot is facing approximately in the direction of the movement vector, both wheels are driven forward at the same speed. Because the robot is now aligned with the vector, this forward motion moves it in the desired image direction.
+Once the robot is facing approximately along its control vector, both wheels drive forward at the same speed. This moves the robot in the desired image direction.
 
-The magnitude or length of the vector is calculated using:
+Calculate the magnitude (length) of the control vector using:
 
 ```math
 \lVert u\rVert=\sqrt{u_x^2+u_y^2}
 ```
 
-`DISTANCE_THRESHOLD` defines how small this control vector must be before the robot should stop. It does not directly measure distance to another robot or guarantee that every pairwise error is below that threshold.
+`DISTANCE_THRESHOLD` specifies how small the control-vector magnitude must be before the robot stops. It is not a robot-to-robot distance threshold and does not guarantee that every pairwise error is below that value.
 
-The forward wheel speed is proportional to the vector magnitude, again capped at 40:
+The forward wheel speed is proportional to the control-vector magnitude, with a maximum command of 40:
 
 ```math
 s_{\mathrm{forward}}=\min(K_{p,d}\lVert u\rVert,40)
@@ -453,16 +460,16 @@ elif abs(angle_error) <= settings.ANGLE_THRESHOLD:
     robot.hamster.wheels(forward_speed, forward_speed)
 ```
 
-The controller follows these main steps:
+The controller repeats the following steps:
 
-- Find the direction of the movement vector.
+- Calculate the direction of the control vector.
 - Turn the robot toward that direction when the heading error exceeds the angle threshold.
 - Drive forward once the robot is sufficiently aligned.
-- Continue correcting direction and driving until the control vector is small enough for the robot to stop.
+- Repeat until the control-vector magnitude falls below the stopping threshold.
 
 ### Reactive Obstacle Avoidance
 
-The HamsterS `apply_control()` also checks left and right proximity sensors before these steps. When a reading exceeds `OBS_THRESHOLD`, the reactive avoidance command takes precedence for that loop iteration:
+Before issuing a formation-control command, `apply_control()` checks the HamsterS left and right proximity sensors. If either reading exceeds `OBS_THRESHOLD`, reactive obstacle avoidance takes priority for that iteration:
 
 ```python
 left = robot.hamster.left_proximity()
@@ -478,24 +485,24 @@ if right > settings.OBS_THRESHOLD:
     return
 ```
 
-This is basic reactive obstacle avoidance, not collision-free path planning. The proximity response temporarily overrides formation control. On another differential-drive platform, the formation calculations remain applicable; sensor and wheel commands must be adapted to that robot.
+This is a basic reactive obstacle-avoidance response, not collision-free path planning. It temporarily overrides formation control. On another differential-drive platform, the same formation calculations can be used, but the sensor and wheel commands must be adapted.
 
 <p align="center">
   <img src="images/obstacle_vid.gif" alt="HamsterS robots demonstrating reactive obstacle avoidance" width="550">
 </p>
-<p align="center"><em>Physical demonstration of reactive obstacle avoidance during formation control.</em></p>
+<p align="center"><em>Figure 5. Physical demonstration of reactive obstacle avoidance during formation control.</em></p>
 
 ### Tuning the Controller
 
-The controller caps normal turning and forward wheel commands at 40, separately from `OBS_SPEED`. `SHAPE_R` controls the target formation spacing; `DISTANCE_THRESHOLD` applies to $`\lVert u_i\rVert`$, not to individual robot-to-robot distances.
+Normal turning and forward wheel commands are capped at 40, independently of `OBS_SPEED`. `SHAPE_R` determines the formation radius, while `DISTANCE_THRESHOLD` applies to $`\lVert u_i\rVert`$ rather than individual robot-to-robot distances.
 
-A smaller `ANGLE_THRESHOLD` makes the robot align more accurately with its control vector, but a threshold that is too small may cause repeated turning corrections.
+A smaller `ANGLE_THRESHOLD` requires closer heading alignment with the control vector. Setting it too low may cause repeated turning corrections, as the robot struggles to align more precisely in a noisey environment.
 
-Begin with low wheel speeds. Higher speeds can cause overshooting, robot collisions, or wheel slippage. Normal speeds are proportional to angular error or control-vector magnitude, not fixed at one value.
+Begin with conservative wheel speeds. Higher speeds may cause overshooting. Under normal formation control, wheel speeds vary with angular error or control-vector magnitude rather than remaining constant.
 
 ## 8. Main Control Loop
 
-The complete system repeatedly detects the robots and updates their commands. The `RobotAgent` object holds each robot’s identity along with its HamsterS instance/connection. It also holds the given robot’s position and orientation, which are updated as the system runs. The following blocks are pieces of the same main program.
+The complete system repeatedly tracks the robots and updates their wheel commands. Each `RobotAgent` stores a robot's marker ID, robot index, HamsterS connection, assigned formation slot, position, and orientation. The following code blocks are consecutive parts of `main.py` and should be assembled in the order shown.
 
 ### Robot Initialization
 
@@ -519,7 +526,7 @@ class RobotAgent:
     orientation: float | None = None
 ```
 
-Keep in mind `position` and `orientation` can be `None` at startup, before the first successful camera detection.
+At startup, `position` and `orientation` are `None` until the camera successfully detects the robot.
 
 ```python
 ROBOTS = {
@@ -533,20 +540,18 @@ ROBOTS = {
 }
 ```
 
-Robots are initialized into a dictionary keyed by their ArUco marker ID. `robot_i` indexes each robot in the position and control-vector arrays; `slot=i` fixes the desired formation position assigned to that robot.
+The robots are stored in a dictionary keyed by ArUco marker ID. `robot_i` indexes the position and control-vector arrays, while `slot=i` assigns each robot a fixed formation slot.
 
 ### Camera Capture and Pose Updates
 
-Set up the camera and request 30 FPS. Actual frame rate depends on the camera and computer.
+Open the camera and request 30 frames per second (FPS). The actual frame rate depends on the camera and computer.
 
 ```python
 cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FPS, 30)
 ```
 
-Begin the loop to grab robot positions from frames.
-
-`ret` is the frame-read success flag: `True` when a frame was read, and `False` when reading failed.
+Read camera frames continuously. The variable `ret` indicates whether a frame was captured successfully: `True` for success and `False` for failure.
 
 ```python
 try:
@@ -558,7 +563,7 @@ try:
         update_poses(ROBOTS, frame)
 ```
 
-`update_poses` is imported from `utils/camera_supervisor.py`. It uses the localization methods above to update the `position` and `orientation` fields in each robot object.
+`update_poses()` uses the marker-detection and pose-estimation methods described above to update each robot's `position` and `orientation` fields.
 
 ```python
         if any(robot.position is None for robot in ROBOTS.values()):
@@ -570,7 +575,7 @@ try:
             continue
 ```
 
-This is a safety mechanism designed to stop all robots whenever any required robot is not detected in the current camera frame. It relies on the pose-reset correction above.
+This check stops all robots if any required marker is missing from the current frame. It relies on `update_poses()` resetting missing poses to `None`.
 
 ### Formation Errors and Wheel Commands
 
@@ -585,11 +590,11 @@ This is a safety mechanism designed to stop all robots whenever any required rob
         displacement_error = actual_offset - desired_offset
 ```
 
-Positions are extracted from the robot objects and used to find the actual displacement vectors between every ordered pair of robots. `actual_offset[i, j]` equals $`p_j-p_i`$. The desired offset is subtracted to find the pairwise displacement error. Both arrays have shape `(N, N, 2)`.
+The measured positions are used to calculate the displacement between every ordered pair of robots. `actual_offset[i, j]` equals $`p_j-p_i`$. Subtracting the desired offset gives the pairwise displacement error. Both displacement arrays have shape `(N, N, 2)`.
 
-A robot’s control vector is the sum of its pairwise displacement errors across the other robots (not a sum of the uncorrected distances). The result has shape `(N, 2)`, one control vector per robot.
+Summing each robot's pairwise displacement errors produces its control vector, as defined in Section 6. The resulting array has shape `(N, 2)`, with one two-dimensional vector per robot.
 
-These control vectors are passed through the `apply_control` function, located in `utils/actuation.py`.
+The `apply_control()` function in `utils/actuation.py` converts these vectors into wheel commands.
 
 ```python
         u = np.sum(displacement_error, axis=1)
@@ -603,7 +608,7 @@ These control vectors are passed through the `apply_control` function, located i
 
 ### Display and Cleanup
 
-Display the camera frame after processing. Press `q` in the OpenCV window to end the loop. The camera image is not automatically annotated unless marker drawing or an overlay is added.
+Display each camera frame after processing. Press `q` in the OpenCV window to end the loop. Marker outlines, IDs, and other overlays appear only if the optional drawing functions are enabled.
 
 ```python
         cv2.imshow("Camera", frame)
@@ -620,15 +625,11 @@ finally:
 
 ### Step 1: Prepare the robots
 
-Attach one unique ArUco marker to each robot.
-
-Individually turn on each HamsterS robot and connect it to the computer in the order corresponding to `target_ids`.
-
-Place the robots inside the camera view.
+Attach a unique ArUco marker to each robot. Turn on the HamsterS robots and connect them to the computer in the order specified by `target_ids`. Place every robot within the camera's field of view.
 
 ### Step 2: Position the camera
 
-Place the camera above the operating area, using an overhead mount or a stable custom support. Keep the camera stationary during the run.
+Mount the camera above the operating area using an overhead mount or another stable support. Keep it stationary throughout the run.
 
 Make sure:
 
@@ -638,7 +639,7 @@ Make sure:
 - The lighting is consistent and adequate
 - The camera remains stationary during operation
 
-Before running formation control, verify that each detected marker ID matches its robot, that the reported heading points toward the robot's front, and that a short turn command rotates in the intended direction.
+Before enabling formation control, confirm that each detected marker ID matches its robot, each measured heading points toward the robot's front, and a short turn command rotates the robot in the intended direction.
 
 ### Step 3: Start the program
 
@@ -648,25 +649,17 @@ Run:
 python main.py
 ```
 
-If using the supplied entry-point filename instead, run `python "rendezvous_new(1).py"`.
+The camera window should show a live image. Marker outlines and IDs appear only when the optional drawing code is enabled; formation overlays from `img_overlay.py` are also optional.
 
-The camera window should display the live image. Detected marker outlines and IDs appear only if the optional drawing code has been enabled; the `img_overlay.py` display is also optional.
-
-The robots should turn toward their individual control vectors and begin moving to reduce their formation errors.
+Once the required markers are detected, the robots should turn toward their control vectors and move to reduce their formation errors.
 
 ### Step 4: Stop the system
 
-Press:
-
-```text
-q
-```
-
-The program should stop every robot before closing.
+Press `q` in the OpenCV camera window to end the program. The cleanup code stops every robot before closing.
 
 ## 10. Expected Result
 
-At the beginning, the robots may be spread throughout the operating area and facing different directions.
+Initially, the robots may be scattered across the operating area and facing different directions.
 
 After starting the controller:
 
@@ -676,7 +669,7 @@ After starting the controller:
 - The robots drive to reduce their pairwise displacement errors.
 - The robots stop when their control-vector magnitudes are within the threshold, unless a proximity-avoidance command takes precedence.
 
-The robots are not supposed to reach the same pixel. With four robots, the desired positions form a square around a common formation center. The final formation may not match the ideal arrangement perfectly because:
+The robots should not converge to a single point. With four robots, the target formation is a square centered around a common formation center. The final arrangement may differ slightly from the ideal formation because:
 
 - The robots have physical size
 - The camera measurements contain noise
@@ -688,17 +681,17 @@ The robots are not supposed to reach the same pixel. With four robots, the desir
 <p align="center">
   <img src="images/rendezvous_example.gif" alt="HamsterS robots moving into their circular formation" width="550">
 </p>
-<p align="center"><em>Physical demonstration of the robots moving into their desired formation.</em></p>
+<p align="center"><em>Figure 6. Physical demonstration of the robots moving into their desired formation.</em></p>
 
 ### Measuring Formation Error
 
-The mean pairwise formation error measures how close the robot arrangement is to its desired relative displacements:
+Mean pairwise formation error measures how closely the measured robot arrangement matches the desired relative displacements:
 
 ```math
 E(t)=\frac{1}{N(N-1)}\sum_{i\ne j}\|e_{ij}(t)\|
 ```
 
-Smaller values indicate a closer match to the desired formation. The supplied `utils/img_overlay.py` already calculates this metric through `global_error()` and can display it with `draw_overlay()`. To record it during the loop, add:
+Smaller values indicate a closer match to the desired formation. The `global_error()` function in `utils/img_overlay.py` calculates this metric, and `draw_overlay()` can display it on the camera image. To record the error during a run, add:
 
 ```python
 # Imports and setup before the main loop
@@ -714,7 +707,7 @@ errors.append(error)
 draw_overlay(frame, ROBOTS, u, error)  # Before cv2.imshow(...)
 ```
 
-To plot the recorded values after the run (with `matplotlib` installed):
+To plot the recorded values after the run, install `matplotlib` if needed (`python -m pip install matplotlib`), then use:
 
 ```python
 import matplotlib.pyplot as plt
@@ -725,7 +718,7 @@ plt.savefig("formation_error_over_time.png", dpi=200)
 plt.close()
 ```
 
-Only frames with all robots detected contribute error samples. Actual runs may fluctuate because of robot motion and sensing noise.
+Only frames in which all robots are detected contribute error samples. The measured error may fluctuate because of robot motion and camera noise.
 
 ## 11. Troubleshooting
 
@@ -734,10 +727,10 @@ Only frames with all robots detected contribute error samples. Actual runs may f
 Try another camera index:
 
 ```python
-camera = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(1)
 ```
 
-Also verify that another application is not using the camera.
+Also make sure that no other application is using the camera.
 
 ### No markers are detected
 
@@ -755,17 +748,17 @@ Check:
 Possible causes include:
 
 - Reversed image coordinates
-- Reversed marker heading
+- Incorrect marker placement 
 - Incorrect wheel signs
 - Incorrect angular-error calculation
 
-Check that `theta` and `target_angle` are both in degrees and use the same image-coordinate convention. Because image y increases downward, do not reverse `uy` unless you also convert the pose/heading convention consistently.
+Check that `theta` and `target_angle` are both expressed in degrees and use the same image-coordinate convention. Because image y increases downward, do not reverse `uy` unless you also adjust the pose and heading calculations consistently.
 
 ### A robot turns in the wrong direction
 
-Check whether positive left-wheel and right-wheel commands produce the expected physical turn. If the robot SDK uses opposite wheel-sign conventions, adapt the wheel mapping in `apply_control()` rather than changing the formation-error equations.
+Verify that positive left- and right-wheel commands produce the expected turns. If the robot SDK uses different wheel-sign conventions, adjust the wheel commands in `apply_control()` rather than changing the formation-error equations.
 
-### The robots oscillate (shake) near the desired formation
+### The robots oscillate near the desired formation
 
 Possible solutions include:
 
@@ -776,17 +769,16 @@ Possible solutions include:
 
 This introductory implementation has several limitations:
 
-- Positions are measured in pixels rather than physical units
-- The system is centralized and depends on an overhead camera
-- All robots must remain visible
-- The controller is centralized
-- Slots are fixed, robots may collide while moving into formation 
-- Only basic proximity-sensor-based reactive avoidance is included; collision-free motion is not guaranteed
+- Robot positions and formation distances are measured in pixels rather than calibrated physical units.
+- Tracking requires a fixed overhead camera with an unobstructed view of every robot marker.
+- All control calculations are performed centrally on one computer.
+- Robots have fixed formation slots and may collide while moving into position.
+- Obstacle avoidance relies on basic proximity-sensor responses and does not guarantee collision-free motion.
 
 
 ## 13. Summary
 
-This tutorial implemented a basic multi-robot formation-control system using HamsterS differential-drive robots and an overhead camera.
+This tutorial demonstrates a basic multi-robot formation-control system using HamsterS differential-drive robots and an overhead camera.
 
 The system:
 
@@ -796,4 +788,4 @@ The system:
 - Converts the vector into differential-drive motion
 - Moves the robots toward a circular formation with a specified radius
 
-This provides a simple introduction to the perception, control, and coordination components of a multi-robot system.
+Together, these steps illustrate how perception, control, and coordination work in a multi-robot system.
