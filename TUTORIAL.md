@@ -1,6 +1,6 @@
 # Multi-Robot Formation Control with Differential-Drive Robots
 
-This tutorial demonstrates formation control using HamsterS differential-drive robots and explains underlying concepts of multi-robot coordination.
+This tutorial demonstrates formation control using a team of differential-drive robots (e.g., Robomation's HamsterS) and explains underlying concepts of multi-robot coordination.
 
 In formation control, a team of robots works to achieve and maintain a desired spatial arrangement. In this implementation, the controller uses the robots' measured positions and desired relative displacements to determine how each robot should move. An overhead camera detects ArUco markers to estimate each robot's position and orientation, while a Python program converts the resulting control vectors into wheel commands. Although this tutorial uses HamsterS robots, the implementation can be adapted to other differential-drive robots.
 
