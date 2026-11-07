@@ -236,7 +236,7 @@ heading_vector = top_center - bottom_center
 Calculate the robot's orientation from this heading vector:
 
 ```math
-\theta_i=\operatorname{atan2}(h_{iy},h_{ix})
+\theta_i=\mathrm{atan2}(h_{iy},h_{ix})
 ```
 
 ```python
@@ -405,7 +405,7 @@ The formation controller produces a control vector $`u_i=[u_{ix},u_{iy}]`$ in th
 Calculate the direction of robot $`i`$'s control vector using:
 
 ```math
-\theta_{\mathrm{target}}=\operatorname{atan2}(u_{iy},u_{ix})
+\theta_{\mathrm{target}}=\mathrm{atan2}(u_{iy},u_{ix})
 ```
 
 The implementation converts this angle to degrees:
