@@ -55,3 +55,30 @@ See the [real-robot demonstration](TUTORIAL.md#real-robot-demonstration) and [re
 ## Summary
 
 The tutorial combines overhead camera-based localization, pairwise formation control, and differential-drive actuation in a simple multi-robot system. See the [full tutorial summary](TUTORIAL.md#13-summary).
+
+## Acknowledgments
+
+We would like to thank the students enrolled in **Multi-Robot Systems (CSCI-B 490/590 and ENGR-E 399/599)** at Indiana University Bloomington in Spring 2026 for their insightful discussions and valuable feedback.
+
+We also thank SMART Lab alumni **Dr. Vishnunandan Venkatesh** (Astemo Americas, Inc.) and **Prof. Wonse Jo** (Incheon National University) for their contributions to developing the Hamster robot control system and SMART Table used in SMART Lab technical seminars.
+
+## Citation
+
+If you find this tutorial useful for your research, teaching, or projects, please consider citing our paper:
+
+**Christian Marowski and Byung-Cheol Min**, "Tutorial: Vision-Based Formation Control with Differential-Drive Robots," *arXiv preprint arXiv:XXX*, 2026.
+
+```bibtex
+@misc{marowski2026formation,
+  title         = {Tutorial: Vision-Based Formation Control with Differential-Drive Robots},
+  author        = {Marowski, Christian and Min, Byung-Cheol},
+  year          = {2026},
+  eprint        = {XXX},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.RO},
+  url           = {https://arxiv.org/abs/XXX}
+}
+```
+
+*The arXiv identifier will be updated once the paper is available online.*
+
