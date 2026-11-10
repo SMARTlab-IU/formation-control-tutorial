@@ -73,10 +73,10 @@ If you find this tutorial useful for your research, teaching, or projects, pleas
   title         = {Tutorial: Vision-Based Formation Control with Differential-Drive Robots},
   author        = {Marowski, Christian and Min, Byung-Cheol},
   year          = {2026},
-  eprint        = {XXX},
+  eprint        = {2611.11164},
   archivePrefix = {arXiv},
   primaryClass  = {cs.RO},
-  url           = {https://arxiv.org/abs/XXX}
+  url           = {https://arxiv.org/abs/2611.11164}
 }
 ```
 
