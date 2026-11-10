@@ -66,7 +66,7 @@ We also thank SMART Lab alumni **Dr. Vishnunandan Venkatesh** (Astemo Americas, 
 
 If you find this tutorial useful for your research, teaching, or projects, please consider citing our paper:
 
-**Christian Marowski and Byung-Cheol Min**, "Tutorial: Vision-Based Formation Control with Differential-Drive Robots," *arXiv preprint arXiv:XXX*, 2026.
+**Christian Marowski and Byung-Cheol Min**, "Tutorial: Vision-Based Formation Control with Differential-Drive Robots," *arXiv preprint arXiv:2611.11164*, 2026.
 
 ```bibtex
 @misc{marowski2026formation,
@@ -79,6 +79,4 @@ If you find this tutorial useful for your research, teaching, or projects, pleas
   url           = {https://arxiv.org/abs/2611.11164}
 }
 ```
-
-*The arXiv identifier will be updated once the paper is available online.*
 
